@@ -51,3 +51,24 @@ void add(sycl::queue &q, const float *mat_a, const float *mat_b,
   });
   evt.wait();
 }
+
+void scalar_multiply(sycl::queue &q, float *const mat, const uint dim,
+                     const uint wg_size, const float mult_factor) {
+  sycl::buffer<float, 2> b_mat{mat, sycl::range<2>{dim, dim}};
+
+  auto evt = q.submit([&](sycl::handler &h) {
+    sycl::accessor<float, 2, sycl::access::mode::read_write,
+                   sycl::access::target::global_buffer>
+        a_mat{b_mat, h};
+
+    h.parallel_for<class kernelScalarMultiply>(
+        sycl::nd_range<2>{sycl::range<2>{dim, dim}, sycl::range<2>{1, wg_size}},
+        [=](sycl::nd_item<2> it) {
+          const uint r = it.get_global_id(0);
+          const uint c = it.get_global_id(1);
+
+          a_mat[r][c] *= mult_factor;
+        });
+  });
+  evt.wait();
+}
