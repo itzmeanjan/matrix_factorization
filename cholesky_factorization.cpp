@@ -1,9 +1,5 @@
 #include "sym_pos_def_matrix.hpp"
 #include "utils.hpp"
-#include <CL/sycl.hpp>
-#include <chrono>
-#include <iostream>
-#include <random>
 
 using namespace sycl;
 
