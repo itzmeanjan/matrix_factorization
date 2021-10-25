@@ -1,4 +1,5 @@
 #include "sym_pos_def_matrix.hpp"
+#include <chrono>
 
 void transpose(sycl::queue &q, float *const mat, const uint dim,
                const uint wg_size) {
@@ -92,4 +93,41 @@ void identity(sycl::queue &q, float *const mat, const uint dim,
         });
   });
   evt.wait();
+}
+
+int64_t gen_symmetric_positive_definite_matrix(sycl::queue &q,
+                                               const float *in_mat,
+                                               float *const out_mat,
+                                               const uint dim,
+                                               const uint wg_size) {
+  const uint size = sizeof(float) * dim * dim;
+  const float MULT_FACTOR = .5f;
+
+  float *mat_b = (float *)malloc(size);
+  float *mat_c = (float *)malloc(size);
+  float *mat_d = (float *)malloc(size);
+
+  memcpy(mat_b, in_mat, size);
+  memset(mat_c, 0, size);
+  memset(mat_d, 0, size);
+  memset(out_mat, 0, size);
+
+  std::chrono::_V2::steady_clock::time_point start =
+      std::chrono::steady_clock::now();
+
+  transpose(q, mat_b, dim, wg_size);
+  add(q, in_mat, mat_b, mat_c, dim, wg_size);
+  scalar_multiply(q, mat_c, dim, wg_size, MULT_FACTOR);
+  identity(q, mat_d, dim, wg_size);
+  add(q, mat_c, mat_d, out_mat, dim, wg_size);
+
+  std::chrono::_V2::steady_clock::time_point end =
+      std::chrono::steady_clock::now();
+
+  std::free(mat_b);
+  std::free(mat_c);
+  std::free(mat_d);
+
+  return std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+      .count();
 }
