@@ -14,4 +14,4 @@ $(OBJECTS): $(SOURCES) $(HEADERS)
 	$(CXX) $(CXXFLAGS) $(SYCLFLAGS) -c $^ $(INCLUDES)
 
 clean:
-	-rm $(wildcard *.o) $(PROG)
+	-rm $(wildcard *.o) $(PROG) $(wildcard include/*.gch)
