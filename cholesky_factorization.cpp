@@ -22,27 +22,24 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
 
   for (uint k = 0; k < N; k++) {
 
-    if (k > 0) {
-      q.submit([&](handler &h) {
-        accessor<float, 2, access::mode::read_write,
-                 access::target::global_buffer>
-            a_mat_out{b_mat_out, h};
+    q.submit([&](handler &h) {
+      accessor<float, 2, access::mode::read_write,
+               access::target::global_buffer>
+          a_mat_out{b_mat_out, h};
 
-        h.parallel_for<class kernelPivotCalc>(
-            nd_range<1>{range<1>{N}, range<1>{B}}, [=](nd_item<1> it) {
-              const uint i = it.get_global_id(0);
+      h.parallel_for<class kernelPivotCalc>(
+          nd_range<1>{range<1>{N}, range<1>{B}}, [=](nd_item<1> it) {
+            const uint i = it.get_global_id(0);
 
-              if (i >= 0 && i < k) {
-                auto ref = sycl::ONEAPI::atomic_ref<
-                    float, sycl::ONEAPI::memory_order::relaxed,
-                    sycl::ONEAPI::memory_scope::work_group,
-                    access::address_space::global_device_space>(
-                    a_mat_out[k][k]);
-                ref.fetch_sub(sycl::pow(a_mat_out[i][k], 2.f));
-              }
-            });
-      });
-    }
+            if (i >= 0 && i < k) {
+              auto ref = sycl::ONEAPI::atomic_ref<
+                  float, sycl::ONEAPI::memory_order::relaxed,
+                  sycl::ONEAPI::memory_scope::work_group,
+                  access::address_space::global_device_space>(a_mat_out[k][k]);
+              ref.fetch_sub(sycl::pow(a_mat_out[i][k], 2.f));
+            }
+          });
+    });
 
     {
       host_accessor<float, 2, access::mode::read_write> h_mat_out{
