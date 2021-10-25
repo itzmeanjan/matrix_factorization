@@ -55,11 +55,15 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
           });
     });
 
-    {
-      host_accessor<float, 2, access::mode::read_write> h_mat_out{
-          b_mat_out, range<2>{1, 1}, id<2>{k, k}};
-      h_mat_out[0][0] = sycl::sqrt(h_mat_out[0][0]);
-    }
+    q.submit([&](handler &h) {
+      accessor<float, 2, access::mode::read_write,
+               access::target::global_buffer>
+          a_mat_out{b_mat_out, h, range<2>{1, 1}, id<2>{k, k}};
+
+      h.single_task([=]() {
+        a_mat_out[0][0] = sycl::sqrt(a_mat_out[0][0]);
+      });
+    });
 
     q.submit([&](handler &h) {
       accessor<float, 2, access::mode::read_write,
