@@ -51,18 +51,19 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
                access::target::global_buffer>
           a_mat_out{b_mat_out, h};
 
+      const uint dim = N - (k + 1);
       h.parallel_for<class kernelRowCalc>(
-          nd_range<1>{range<1>{N}, range<1>{B}}, [=](nd_item<1> it) {
+          nd_range<1>{range<1>{dim}, range<1>{dim >= B ? B : 1}, id<1>{k + 1}},
+          [=](nd_item<1> it) {
             const uint i = it.get_global_id(0);
 
-            if (i > k && i < N) {
-              float sum = 0.f;
-              for (uint j = 0; j < k; j++) {
-                sum += a_mat_out[j][k] * a_mat_out[j][i];
-              }
-              a_mat_out[k][i] -= sum;
-              a_mat_out[k][i] /= a_mat_out[k][k];
+            float sum = 0.f;
+            for (uint j = 0; j < k; j++) {
+              sum += a_mat_out[j][k] * a_mat_out[j][i];
             }
+
+            a_mat_out[k][i] -= sum;
+            a_mat_out[k][i] /= a_mat_out[k][k];
           });
     });
   }
