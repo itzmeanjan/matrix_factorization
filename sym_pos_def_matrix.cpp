@@ -72,3 +72,24 @@ void scalar_multiply(sycl::queue &q, float *const mat, const uint dim,
   });
   evt.wait();
 }
+
+void identity(sycl::queue &q, float *const mat, const uint dim,
+              const uint wg_size) {
+  memset(mat, 0, sizeof(float) * dim * dim);
+  sycl::buffer<float, 2> b_mat{mat, sycl::range<2>{dim, dim}};
+
+  auto evt = q.submit([&](sycl::handler &h) {
+    sycl::accessor<float, 2, sycl::access::mode::write,
+                   sycl::access::target::global_buffer>
+        a_mat{b_mat, h};
+
+    h.parallel_for<class kernelIdentity>(
+        sycl::nd_range<1>{sycl::range<1>{dim}, sycl::range<1>{wg_size}},
+        [=](sycl::nd_item<1> it) {
+          const uint r = it.get_global_id(0);
+
+          a_mat[r][r] = dim;
+        });
+  });
+  evt.wait();
+}

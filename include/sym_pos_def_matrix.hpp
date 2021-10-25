@@ -8,3 +8,6 @@ void add(sycl::queue &q, const float *mat_a, const float *mat_b,
 
 void scalar_multiply(sycl::queue &q, float *const mat, const uint dim,
                      const uint wg_size, const float mult_factor);
+
+void identity(sycl::queue &q, float *const mat, const uint dim,
+              const uint wg_size);
