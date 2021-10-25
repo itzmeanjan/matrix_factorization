@@ -21,3 +21,10 @@ void show(const float *mat, const uint dim) {
   }
   std::cout << std::endl;
 }
+
+uint compute_work_group_size(const uint dim, uint wg_size) {
+  while(wg_size > dim && wg_size > 1) {
+    wg_size = wg_size >> 1;
+  }
+  return wg_size;
+}

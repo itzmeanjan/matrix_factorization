@@ -43,7 +43,7 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
           a_mat_out{b_mat_out, h, range<2>{k + 1, 1}, id<2>{0, k}};
 
       h.parallel_for<class kernelPivotCalc>(
-          nd_range<1>{range<1>{k}, range<1>{B <= k ? B : 1}},
+          nd_range<1>{range<1>{k}, range<1>{compute_work_group_size(k, B)}},
           [=](nd_item<1> it) {
             const uint i = it.get_global_id(0);
 
@@ -60,9 +60,7 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
                access::target::global_buffer>
           a_mat_out{b_mat_out, h, range<2>{1, 1}, id<2>{k, k}};
 
-      h.single_task([=]() {
-        a_mat_out[0][0] = sycl::sqrt(a_mat_out[0][0]);
-      });
+      h.single_task([=]() { a_mat_out[0][0] = sycl::sqrt(a_mat_out[0][0]); });
     });
 
     q.submit([&](handler &h) {
@@ -72,7 +70,8 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
 
       const uint dim = N - (k + 1);
       h.parallel_for<class kernelRowCalc>(
-          nd_range<1>{range<1>{dim}, range<1>{dim >= B ? B : 1}, id<1>{k + 1}},
+          nd_range<1>{range<1>{dim}, range<1>{compute_work_group_size(dim, B)},
+                      id<1>{k + 1}},
           [=](nd_item<1> it) {
             const uint i = it.get_global_id(0);
 
