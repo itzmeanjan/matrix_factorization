@@ -17,6 +17,22 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
 
   buffer<float, 2> b_mat_out{mat_out, range<2>{N, N}};
 
+  auto evt = q.submit([&](handler &h) {
+    accessor<float, 2, access::mode::write, access::target::global_buffer>
+        a_mat_out{b_mat_out, h};
+
+    h.parallel_for<class kernelZeroLower>(
+        nd_range<2>{range<2>{N, N}, range<2>{1, B}}, [=](nd_item<2> it) {
+          const uint i = it.get_global_id(0);
+          const uint j = it.get_global_id(1);
+
+          if (i > j) {
+            a_mat_out[i][j] = 0.f;
+          }
+        });
+  });
+  evt.wait();
+
   std::chrono::_V2::steady_clock::time_point start =
       std::chrono::steady_clock::now();
 
@@ -67,22 +83,6 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
           });
     });
   }
-
-  auto evt = q.submit([&](handler &h) {
-    accessor<float, 2, access::mode::write, access::target::global_buffer>
-        a_mat_out{b_mat_out, h};
-
-    h.parallel_for<class kernelZeroLower>(
-        nd_range<2>{range<2>{N, N}, range<2>{1, B}}, [=](nd_item<2> it) {
-          const uint i = it.get_global_id(0);
-          const uint j = it.get_global_id(1);
-
-          if (i > j) {
-            a_mat_out[i][j] = 0.f;
-          }
-        });
-  });
-  evt.wait();
 
   std::chrono::_V2::steady_clock::time_point end =
       std::chrono::steady_clock::now();
