@@ -2,6 +2,7 @@
 #include <chrono>
 #include <iostream>
 #include <random>
+#include "sym_pos_def_matrix.hpp"
 
 using namespace sycl;
 
@@ -90,120 +91,6 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
       .count();
 }
 
-void identity(queue &q, float *const mat) {
-  memset(mat, 0, sizeof(float) * N * N);
-  buffer<float, 2> b_mat{mat, range<2>{N, N}};
-
-  auto evt = q.submit([&](handler &h) {
-    accessor<float, 2, access::mode::write, access::target::global_buffer>
-        a_mat{b_mat, h};
-
-    h.parallel_for<class kernelIdentity>(nd_range<1>{range<1>{N}, range<1>{B}},
-                                         [=](nd_item<1> it) {
-                                           const uint r = it.get_global_id(0);
-
-                                           a_mat[r][r] = N;
-                                         });
-  });
-  evt.wait();
-}
-
-void scalar_multiply(queue &q, float *const mat) {
-  buffer<float, 2> b_mat{mat, range<2>{N, N}};
-
-  auto evt = q.submit([&](handler &h) {
-    accessor<float, 2, access::mode::read_write, access::target::global_buffer>
-        a_mat{b_mat, h};
-
-    h.parallel_for<class kernelScalarMultiply>(
-        nd_range<2>{range<2>{N, N}, range<2>{1, B}}, [=](nd_item<2> it) {
-          const uint r = it.get_global_id(0);
-          const uint c = it.get_global_id(1);
-
-          a_mat[r][c] *= MULT_FACTOR;
-        });
-  });
-  evt.wait();
-}
-
-void add(queue &q, const float *mat_a, const float *mat_b, float *const mat_c) {
-  buffer<float, 2> b_mat_a{mat_a, range<2>{N, N}};
-  buffer<float, 2> b_mat_b{mat_b, range<2>{N, N}};
-  buffer<float, 2> b_mat_c{mat_c, range<2>{N, N}};
-
-  auto evt = q.submit([&](handler &h) {
-    accessor<float, 2, access::mode::read, access::target::global_buffer>
-        a_mat_a{b_mat_a, h};
-    accessor<float, 2, access::mode::read, access::target::global_buffer>
-        a_mat_b{b_mat_b, h};
-    accessor<float, 2, access::mode::write, access::target::global_buffer>
-        a_mat_c{b_mat_c, h, noinit};
-
-    h.parallel_for<class kernelAdd>(
-        nd_range<2>{range<2>{N, N}, range<2>{1, B}}, [=](nd_item<2> it) {
-          const uint r = it.get_global_id(0);
-          const uint c = it.get_global_id(1);
-
-          a_mat_c[r][c] = a_mat_a[r][c] + a_mat_b[r][c];
-        });
-  });
-  evt.wait();
-}
-
-void transpose(queue &q, float *const mat) {
-  buffer<float, 2> b_mat{mat, range<2>{N, N}};
-
-  auto evt = q.submit([&](handler &h) {
-    accessor<float, 2, access::mode::read_write, access::target::global_buffer>
-        a_mat{b_mat, h};
-
-    h.parallel_for<class kernelTranspose>(nd_range<1>{N, B},
-                                          [=](nd_item<1> it) {
-                                            const uint r = it.get_global_id(0);
-
-                                            for (uint c = 0; c < r; c++) {
-                                              const float tmp = a_mat[r][c];
-                                              a_mat[r][c] = a_mat[c][r];
-                                              a_mat[c][r] = tmp;
-                                            }
-                                          });
-  });
-  evt.wait();
-}
-
-int64_t gen_symmetric_positive_definite_matrix(queue &q, const float *in_mat,
-                                               float *const out_mat) {
-  const uint size = sizeof(float) * N * N;
-
-  float *mat_b = (float *)malloc(size);
-  float *mat_c = (float *)malloc(size);
-  float *mat_d = (float *)malloc(size);
-
-  memcpy(mat_b, in_mat, size);
-  memset(mat_c, 0, size);
-  memset(mat_d, 0, size);
-  memset(out_mat, 0, size);
-
-  std::chrono::_V2::steady_clock::time_point start =
-      std::chrono::steady_clock::now();
-
-  transpose(q, mat_b);
-  add(q, in_mat, mat_b, mat_c);
-  scalar_multiply(q, mat_c);
-  identity(q, mat_d);
-  add(q, mat_c, mat_d, out_mat);
-
-  std::chrono::_V2::steady_clock::time_point end =
-      std::chrono::steady_clock::now();
-
-  std::free(mat_b);
-  std::free(mat_c);
-  std::free(mat_d);
-
-  return std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
-      .count();
-}
-
 void random_matrix(float *const matrix) {
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -242,11 +129,11 @@ int main() {
   memset(mat_out, 0, size);
   memset(mat_fac, 0, size);
 
-  int64_t ts_0 = gen_symmetric_positive_definite_matrix(q, mat_in, mat_out);
+  int64_t ts_0 = gen_symmetric_positive_definite_matrix(q, mat_in, mat_out, N, B);
   int64_t ts_1 = cholesky(q, mat_out, mat_fac);
 
   memcpy(mat_fac_, mat_fac, size);
-  transpose(q, mat_fac_);
+  transpose(q, mat_fac_, N, B);
 
   float max_dev = 0.f;
   for (uint i = 0; i < N; i++) {
