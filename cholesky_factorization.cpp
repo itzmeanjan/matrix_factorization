@@ -126,10 +126,10 @@ int main() {
     }
   }
 
-  std::cout << "\nrandom symmetric positive definite matrix generated, in "
-            << ts_0 << " ms\n"
-            << "cholesky factorization, in " << ts_1 << " ms\t|\tmax deviation "
-            << max_dev << std::endl;
+  std::cout << "\nrandom symmetric positive definite matrix, in " << ts_0
+            << " ms\n"
+            << "cholesky factorization, in " << ts_1 << " ms\n"
+            << "max deviation " << max_dev << std::endl;
 
   std::free(mat_in);
   std::free(mat_out);
