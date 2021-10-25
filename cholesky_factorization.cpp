@@ -25,7 +25,7 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
     q.submit([&](handler &h) {
       accessor<float, 2, access::mode::read_write,
                access::target::global_buffer>
-          a_mat_out{b_mat_out, h};
+          a_mat_out{b_mat_out, h, range<2>{k + 1, 1}, id<2>{0, k}};
 
       h.parallel_for<class kernelPivotCalc>(
           nd_range<1>{range<1>{k}, range<1>{B <= k ? B : 1}},
@@ -35,8 +35,8 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
             auto ref = sycl::ONEAPI::atomic_ref<
                 float, sycl::ONEAPI::memory_order::relaxed,
                 sycl::ONEAPI::memory_scope::work_group,
-                access::address_space::global_device_space>(a_mat_out[k][k]);
-            ref.fetch_sub(sycl::pow(a_mat_out[i][k], 2.f));
+                access::address_space::global_device_space>(a_mat_out[k][0]);
+            ref.fetch_sub(sycl::pow(a_mat_out[i][0], 2.f));
           });
     });
 
