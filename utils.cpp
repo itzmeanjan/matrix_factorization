@@ -23,8 +23,8 @@ void show(const float *mat, const uint dim) {
 }
 
 uint compute_work_group_size(const uint dim, uint wg_size) {
-  while(wg_size > dim && wg_size > 1) {
-    wg_size = wg_size >> 1;
-  }
+  while (dim % wg_size != 0 && wg_size > 1)
+    wg_size--;
+
   return wg_size;
 }
