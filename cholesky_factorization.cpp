@@ -1,8 +1,9 @@
+#include "sym_pos_def_matrix.hpp"
+#include "utils.hpp"
 #include <CL/sycl.hpp>
 #include <chrono>
 #include <iostream>
 #include <random>
-#include "sym_pos_def_matrix.hpp"
 
 using namespace sycl;
 
@@ -91,28 +92,6 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
       .count();
 }
 
-void random_matrix(float *const matrix) {
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_real_distribution<float> dis(0.f, 1.f);
-
-  for (uint i = 0; i < N; i++) {
-    for (uint j = 0; j < N; j++) {
-      matrix[i * N + j] = dis(gen);
-    }
-  }
-}
-
-void show(const float *mat) {
-  for (uint i = 0; i < N; i++) {
-    for (uint j = 0; j < N; j++) {
-      std::cout << mat[i * N + j] << "\t";
-    }
-    std::cout << std::endl;
-  }
-  std::cout << std::endl;
-}
-
 int main() {
   device d{default_selector{}};
   queue q{d};
@@ -125,11 +104,12 @@ int main() {
   float *mat_fac = (float *)malloc(size);
   float *mat_fac_ = (float *)malloc(size);
 
-  random_matrix(mat_in);
+  random_matrix(mat_in, N);
   memset(mat_out, 0, size);
   memset(mat_fac, 0, size);
 
-  int64_t ts_0 = gen_symmetric_positive_definite_matrix(q, mat_in, mat_out, N, B);
+  int64_t ts_0 =
+      gen_symmetric_positive_definite_matrix(q, mat_in, mat_out, N, B);
   int64_t ts_1 = cholesky(q, mat_out, mat_fac);
 
   memcpy(mat_fac_, mat_fac, size);
