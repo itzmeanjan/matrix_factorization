@@ -17,7 +17,7 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
 
   buffer<float, 2> b_mat_out{mat_out, range<2>{N, N}};
 
-  auto evt = q.submit([&](handler &h) {
+  q.submit([&](handler &h) {
     accessor<float, 2, access::mode::write, access::target::global_buffer>
         a_mat_out{b_mat_out, h};
 
@@ -31,7 +31,6 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
           }
         });
   });
-  evt.wait();
 
   std::chrono::_V2::steady_clock::time_point start =
       std::chrono::steady_clock::now();
@@ -83,6 +82,8 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
           });
     });
   }
+
+  q.wait();
 
   std::chrono::_V2::steady_clock::time_point end =
       std::chrono::steady_clock::now();
