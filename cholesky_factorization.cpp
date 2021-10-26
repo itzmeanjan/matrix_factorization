@@ -1,3 +1,4 @@
+#include "cholesky_factorization.hpp"
 #include "sym_pos_def_matrix.hpp"
 #include "utils.hpp"
 
