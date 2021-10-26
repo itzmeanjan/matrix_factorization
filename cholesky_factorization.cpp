@@ -1,24 +1,23 @@
+#include "cholesky_factorization.hpp"
 #include "sym_pos_def_matrix.hpp"
 #include "utils.hpp"
 
 using namespace sycl;
 
-const uint N = 1 << 10;
-const uint B = 1 << 5;
-const float MULT_FACTOR = .5f;
-
 // Read: https://cseweb.ucsd.edu//~hskim/files/cse260.pdf
-int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
-  memcpy(mat_out, mat_in, sizeof(float) * N * N);
+int64_t cholesky(queue &q, const float *mat_in, float *const mat_out,
+                 const uint dim, const uint wg_size) {
+  memcpy(mat_out, mat_in, sizeof(float) * dim * dim);
 
-  buffer<float, 2> b_mat_out{mat_out, range<2>{N, N}};
+  buffer<float, 2> b_mat_out{mat_out, range<2>{dim, dim}};
 
   q.submit([&](handler &h) {
     accessor<float, 2, access::mode::write, access::target::global_buffer>
         a_mat_out{b_mat_out, h};
 
     h.parallel_for<class kernelZeroLower>(
-        nd_range<2>{range<2>{N, N}, range<2>{1, B}}, [=](nd_item<2> it) {
+        nd_range<2>{range<2>{dim, dim}, range<2>{1, wg_size}},
+        [=](nd_item<2> it) {
           const uint i = it.get_global_id(0);
           const uint j = it.get_global_id(1);
 
@@ -31,7 +30,7 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
   std::chrono::_V2::steady_clock::time_point start =
       std::chrono::steady_clock::now();
 
-  for (uint k = 0; k < N; k++) {
+  for (uint k = 0; k < dim; k++) {
 
     q.submit([&](handler &h) {
       accessor<float, 2, access::mode::read_write,
@@ -39,7 +38,8 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
           a_mat_out{b_mat_out, h, range<2>{k + 1, 1}, id<2>{0, k}};
 
       h.parallel_for<class kernelPivotCalc>(
-          nd_range<1>{range<1>{k}, range<1>{compute_work_group_size(k, B)}},
+          nd_range<1>{range<1>{k},
+                      range<1>{compute_work_group_size(k, wg_size)}},
           [=](nd_item<1> it) {
             const uint i = it.get_global_id(0);
 
@@ -64,9 +64,10 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
                access::target::global_buffer>
           a_mat_out{b_mat_out, h};
 
-      const uint dim = N - (k + 1);
+      const uint dim_ = dim - (k + 1);
       h.parallel_for<class kernelRowCalc>(
-          nd_range<1>{range<1>{dim}, range<1>{compute_work_group_size(dim, B)},
+          nd_range<1>{range<1>{dim_},
+                      range<1>{compute_work_group_size(dim_, wg_size)},
                       id<1>{k + 1}},
           [=](nd_item<1> it) {
             const uint i = it.get_global_id(0);
@@ -93,46 +94,50 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
 int main() {
   device d{default_selector{}};
   queue q{d};
-  std::cout << "running on " << d.get_info<info::device::name>() << std::endl;
+  std::cout << "running on " << d.get_info<info::device::name>() << "\n"
+            << std::endl;
 
-  uint size = sizeof(float) * N * N;
+  const uint N = 1 << 10;
+  const uint B = 1 << 5;
 
-  float *mat_in = (float *)malloc(size);
-  float *mat_out = (float *)malloc(size);
-  float *mat_fac = (float *)malloc(size);
-  float *mat_fac_ = (float *)malloc(size);
+  for (uint dim = B; dim <= N; dim <<= 1) {
+    uint size = sizeof(float) * dim * dim;
 
-  random_matrix(mat_in, N);
-  memset(mat_out, 0, size);
-  memset(mat_fac, 0, size);
+    float *mat_in = (float *)malloc(size);
+    float *mat_out = (float *)malloc(size);
+    float *mat_fac = (float *)malloc(size);
+    float *mat_fac_ = (float *)malloc(size);
 
-  int64_t ts_0 =
-      gen_symmetric_positive_definite_matrix(q, mat_in, mat_out, N, B);
-  int64_t ts_1 = cholesky(q, mat_out, mat_fac);
+    random_matrix(mat_in, dim);
+    memset(mat_out, 0, size);
+    memset(mat_fac, 0, size);
 
-  memcpy(mat_fac_, mat_fac, size);
-  transpose(q, mat_fac_, N, B);
+    int64_t ts_0 =
+        gen_symmetric_positive_definite_matrix(q, mat_in, mat_out, dim, B);
+    int64_t ts_1 = cholesky(q, mat_out, mat_fac, dim, B);
 
-  float max_dev = 0.f;
-  for (uint i = 0; i < N; i++) {
-    for (uint j = 0; j < N; j++) {
-      float sum = 0.f;
-      for (uint k = 0; k < N; k++) {
-        sum += mat_fac_[i * N + k] * mat_fac[k * N + j];
+    memcpy(mat_fac_, mat_fac, size);
+    transpose(q, mat_fac_, dim, B);
+
+    float max_dev = 0.f;
+    for (uint i = 0; i < dim; i++) {
+      for (uint j = 0; j < dim; j++) {
+        float sum = 0.f;
+        for (uint k = 0; k < dim; k++) {
+          sum += mat_fac_[i * dim + k] * mat_fac[k * dim + j];
+        }
+        max_dev = std::max(max_dev, std::abs(mat_out[i * dim + j] - sum));
       }
-      max_dev = std::max(max_dev, std::abs(mat_out[i * N + j] - sum));
     }
+
+    std::cout << dim << "x" << dim << "\t\t\t" << ts_1 << "ms\t\t\t" << max_dev
+              << std::endl;
+
+    std::free(mat_in);
+    std::free(mat_out);
+    std::free(mat_fac);
+    std::free(mat_fac_);
   }
-
-  std::cout << "\nrandom symmetric positive definite matrix, in " << ts_0
-            << " ms\n"
-            << "cholesky factorization, in " << ts_1 << " ms\n"
-            << "max deviation " << max_dev << std::endl;
-
-  std::free(mat_in);
-  std::free(mat_out);
-  std::free(mat_fac);
-  std::free(mat_fac_);
 
   return 0;
 }
