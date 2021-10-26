@@ -94,7 +94,8 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out,
 int main() {
   device d{default_selector{}};
   queue q{d};
-  std::cout << "running on " << d.get_info<info::device::name>() << "\n"
+  std::cout << "running on " << d.get_info<info::device::name>()
+            << "\n\nCholesky Factorization:\n"
             << std::endl;
 
   const uint N = 1 << 10;
