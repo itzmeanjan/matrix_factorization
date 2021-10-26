@@ -1,7 +1,6 @@
 #include "cholesky_factorization.hpp"
 #include "sym_pos_def_matrix.hpp"
 #include "utils.hpp"
-#include <iomanip>
 
 using namespace sycl;
 
@@ -95,12 +94,13 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out,
 int main() {
   device d{default_selector{}};
   queue q{d};
-  std::cout << "running on " << d.get_info<info::device::name>() << std::endl;
+  std::cout << "running on " << d.get_info<info::device::name>() << "\n"
+            << std::endl;
 
   const uint N = 1 << 10;
   const uint B = 1 << 5;
 
-  for (uint dim = N; dim <= N; dim <<= 1) {
+  for (uint dim = B; dim <= N; dim <<= 1) {
     uint size = sizeof(float) * dim * dim;
 
     float *mat_in = (float *)malloc(size);
@@ -130,13 +130,8 @@ int main() {
       }
     }
 
-    std::cout << std::setw(10) << dim << "x" << dim << std::setw(15) << ts_1
-              << "ms" << std::setw(20) << max_dev << std::endl;
-
-    // std::cout << "\nrandom symmetric positive definite matrix, in " << ts_0
-    //           << " ms\n"
-    //           << "cholesky factorization, in " << ts_1 << " ms\n"
-    //           << "max deviation " << max_dev << std::endl;
+    std::cout << dim << "x" << dim << "\t\t\t" << ts_1 << "ms\t\t\t" << max_dev
+              << std::endl;
 
     std::free(mat_in);
     std::free(mat_out);
