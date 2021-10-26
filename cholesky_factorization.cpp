@@ -9,17 +9,19 @@ const uint B = 1 << 5;
 const float MULT_FACTOR = .5f;
 
 // Read: https://cseweb.ucsd.edu//~hskim/files/cse260.pdf
-int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
-  memcpy(mat_out, mat_in, sizeof(float) * N * N);
+int64_t cholesky(queue &q, const float *mat_in, float *const mat_out,
+                 const uint dim, const uint wg_size) {
+  memcpy(mat_out, mat_in, sizeof(float) * dim * dim);
 
-  buffer<float, 2> b_mat_out{mat_out, range<2>{N, N}};
+  buffer<float, 2> b_mat_out{mat_out, range<2>{dim, dim}};
 
   q.submit([&](handler &h) {
     accessor<float, 2, access::mode::write, access::target::global_buffer>
         a_mat_out{b_mat_out, h};
 
     h.parallel_for<class kernelZeroLower>(
-        nd_range<2>{range<2>{N, N}, range<2>{1, B}}, [=](nd_item<2> it) {
+        nd_range<2>{range<2>{dim, dim}, range<2>{1, wg_size}},
+        [=](nd_item<2> it) {
           const uint i = it.get_global_id(0);
           const uint j = it.get_global_id(1);
 
@@ -32,7 +34,7 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
   std::chrono::_V2::steady_clock::time_point start =
       std::chrono::steady_clock::now();
 
-  for (uint k = 0; k < N; k++) {
+  for (uint k = 0; k < dim; k++) {
 
     q.submit([&](handler &h) {
       accessor<float, 2, access::mode::read_write,
@@ -40,7 +42,8 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
           a_mat_out{b_mat_out, h, range<2>{k + 1, 1}, id<2>{0, k}};
 
       h.parallel_for<class kernelPivotCalc>(
-          nd_range<1>{range<1>{k}, range<1>{compute_work_group_size(k, B)}},
+          nd_range<1>{range<1>{k},
+                      range<1>{compute_work_group_size(k, wg_size)}},
           [=](nd_item<1> it) {
             const uint i = it.get_global_id(0);
 
@@ -65,9 +68,10 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out) {
                access::target::global_buffer>
           a_mat_out{b_mat_out, h};
 
-      const uint dim = N - (k + 1);
+      const uint dim = dim - (k + 1);
       h.parallel_for<class kernelRowCalc>(
-          nd_range<1>{range<1>{dim}, range<1>{compute_work_group_size(dim, B)},
+          nd_range<1>{range<1>{dim},
+                      range<1>{compute_work_group_size(dim, wg_size)},
                       id<1>{k + 1}},
           [=](nd_item<1> it) {
             const uint i = it.get_global_id(0);
@@ -109,7 +113,7 @@ int main() {
 
   int64_t ts_0 =
       gen_symmetric_positive_definite_matrix(q, mat_in, mat_out, N, B);
-  int64_t ts_1 = cholesky(q, mat_out, mat_fac);
+  int64_t ts_1 = cholesky(q, mat_out, mat_fac, N, B);
 
   memcpy(mat_fac_, mat_fac, size);
   transpose(q, mat_fac_, N, B);
