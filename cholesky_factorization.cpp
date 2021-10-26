@@ -68,10 +68,10 @@ int64_t cholesky(queue &q, const float *mat_in, float *const mat_out,
                access::target::global_buffer>
           a_mat_out{b_mat_out, h};
 
-      const uint dim = dim - (k + 1);
+      const uint dim_ = dim - (k + 1);
       h.parallel_for<class kernelRowCalc>(
-          nd_range<1>{range<1>{dim},
-                      range<1>{compute_work_group_size(dim, wg_size)},
+          nd_range<1>{range<1>{dim_},
+                      range<1>{compute_work_group_size(dim_, wg_size)},
                       id<1>{k + 1}},
           [=](nd_item<1> it) {
             const uint i = it.get_global_id(0);
