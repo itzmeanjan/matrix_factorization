@@ -36,12 +36,12 @@ running on Intel(R) Xeon(R) CPU E5-2686 v4 @ 2.30GHz
 
 Cholesky Factorization:
 
-32x32			5ms			1.14441e-05
-64x64			4ms			3.8147e-05
-128x128			9ms			0.00012207
-256x256			17ms			0.000305176
-512x512			72ms			0.00109863
-1024x1024			413ms			0.0045166
+32   x   32			         5 ms			1.14441e-05
+64   x   64			         4 ms			4.57764e-05
+128  x  128			         9 ms			9.15527e-05
+256  x  256			        17 ms			0.000427246
+512  x  512			        71 ms			0.00115967
+1024 x 1024			       409 ms			0.00610352
 ```
 
 - On CPU_1
@@ -49,12 +49,14 @@ Cholesky Factorization:
 ```bash
 running on Intel(R) Xeon(R) Gold 6128 CPU @ 3.40GHz
 
-32x32			9ms			1.14441e-05
-64x64			6ms			5.34058e-05
-128x128			10ms			0.000106812
-256x256			22ms			0.000274658
-512x512			52ms			0.00134277
-1024x1024			168ms			0.00476074
+Cholesky Factorization:
+
+32   x   32			         8 ms			1.14441e-05
+64   x   64			         5 ms			2.28882e-05
+128  x  128			        10 ms			9.15527e-05
+256  x  256			        23 ms			0.000274658
+512  x  512			        55 ms			0.00128174
+1024 x 1024			       179 ms			0.00488281
 ```
 
 - On GPU
@@ -62,10 +64,12 @@ running on Intel(R) Xeon(R) Gold 6128 CPU @ 3.40GHz
 ```bash
 running on Intel(R) Iris(R) Xe MAX Graphics [0x4905]
 
-32x32			2ms			7.62939e-06
-64x64			3ms			3.8147e-05
-128x128			7ms			0.00012207
-256x256			21ms			0.000274658
-512x512			75ms			0.00134277
-1024x1024			305ms			0.00476074
+Cholesky Factorization:
+
+32   x   32			         2 ms			7.62939e-06
+64   x   64			         3 ms			3.8147e-05
+128  x  128			         8 ms			9.15527e-05
+256  x  256			        21 ms			0.000427246
+512  x  512			        78 ms			0.000976562
+1024 x 1024			       305 ms			0.00439453
 ```
