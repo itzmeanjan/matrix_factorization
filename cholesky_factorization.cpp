@@ -1,6 +1,7 @@
 #include "cholesky_factorization.hpp"
 #include "sym_pos_def_matrix.hpp"
 #include "utils.hpp"
+#include <iomanip>
 
 using namespace sycl;
 
@@ -131,7 +132,10 @@ int main() {
       }
     }
 
-    std::cout << dim << "x" << dim << "\t\t\t" << ts_1 << "ms\t\t\t" << max_dev
+    std::cout << std::setw(5) << std::left << dim << "x" << std::setw(5)
+              << std::right << dim << "\t\t\t" << std::setw(10) << std::right
+              << ts_1 << " ms"
+              << "\t\t\t" << std::setw(10) << std::right << max_dev
               << std::endl;
 
     std::free(mat_in);
