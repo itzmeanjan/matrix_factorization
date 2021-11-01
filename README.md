@@ -8,6 +8,7 @@ I've started writing matrix factorization implementations, targeting accelerator
 Some posts I wrote, should accompany them:
 
 - [Cholesky Factorization](https://itzmeanjan.in/pages/parallel-cholesky-factorization.html)
+- [Improved Cholesky Factorization](https://itzmeanjan.in/pages/improving-parallel-cholesky-factorization.html)
 
 ## Usage
 
@@ -36,12 +37,13 @@ running on Intel(R) Xeon(R) CPU E5-2686 v4 @ 2.30GHz
 
 Cholesky Factorization:
 
-32   x   32			         5 ms			1.14441e-05
-64   x   64			         4 ms			4.57764e-05
-128  x  128			         9 ms			9.15527e-05
-256  x  256			        17 ms			0.000427246
-512  x  512			        71 ms			0.00115967
-1024 x 1024			       409 ms			0.00610352
+  dimension			      time			max deviation
+32   x   32			         5 ms			7.62939e-06
+64   x   64			         5 ms			3.05176e-05
+128  x  128			        10 ms			0.00012207
+256  x  256			        20 ms			0.000305176
+512  x  512			        67 ms			 0.0012207
+1024 x 1024			       370 ms			0.00610352
 ```
 
 - On CPU_1
@@ -51,12 +53,13 @@ running on Intel(R) Xeon(R) Gold 6128 CPU @ 3.40GHz
 
 Cholesky Factorization:
 
+  dimension			      time			max deviation
 32   x   32			         8 ms			1.14441e-05
-64   x   64			         5 ms			2.28882e-05
+64   x   64			         6 ms			3.8147e-05
 128  x  128			        10 ms			9.15527e-05
-256  x  256			        23 ms			0.000274658
-512  x  512			        55 ms			0.00128174
-1024 x 1024			       179 ms			0.00488281
+256  x  256			        21 ms			0.000305176
+512  x  512			        52 ms			0.000976562
+1024 x 1024			       172 ms			0.00524902
 ```
 
 - On GPU
@@ -66,6 +69,7 @@ running on Intel(R) Iris(R) Xe MAX Graphics [0x4905]
 
 Cholesky Factorization:
 
+  dimension			      time			max deviation
 32   x   32			         2 ms			7.62939e-06
 64   x   64			         3 ms			3.8147e-05
 128  x  128			         8 ms			9.15527e-05

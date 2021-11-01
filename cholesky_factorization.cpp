@@ -102,6 +102,10 @@ int main() {
   const uint N = 1 << 10;
   const uint B = 1 << 5;
 
+  std::cout << std::setw(11) << "dimension"
+            << "\t\t\t" << std::setw(10) << "time"
+            << "\t\t\t" << std::setw(10) << "max deviation" << std::endl;
+
   for (uint dim = B; dim <= N; dim <<= 1) {
     uint size = sizeof(float) * dim * dim;
 
