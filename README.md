@@ -1,3 +1,5 @@
+> **Warning** I've stopped maintaining this project !
+
 # matrix_factorization
 Parallel Matrix Factorization on GPGPU
 
